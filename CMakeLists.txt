@@ -5,5 +5,5 @@ set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 	CACHE STRING "Vcpkg toolchain file")
 set(OpenCV_DIR "C:/vcpkg/installed/x64-windows/share/opencv")
 find_package(OpenCV REQUIRED)
-add_executable(MyProject main.cpp)
+add_executable(MyProject main.cpp histogram.cpp)
 target_link_libraries(MyProject PRIVATE ${OpenCV_LIBS})

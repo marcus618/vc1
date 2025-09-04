@@ -2,6 +2,8 @@
 #include <iostream>
 #include <chrono>
 #include <opencv2/core/utils/logger.hpp>
+#include <fstream>
+#include "histogram.hpp"
 
 
 struct KeypointsAndDescriptors {
@@ -31,7 +33,7 @@ KeypointsAndDescriptors featureDetection(const std::string& detectorName,  cv::M
 	
 }
 
-void match(const std::string& detectorName, const std::string& path1, const KeypointsAndDescriptors& res1, const std::string& path2, const KeypointsAndDescriptors& res2){
+std::vector<cv::DMatch> match(const std::string& detectorName, const std::string& path1, const KeypointsAndDescriptors& res1, const std::string& path2, const KeypointsAndDescriptors& res2){
 	int normType = (detectorName == "ORB") ? cv::NORM_HAMMING : cv::NORM_L2;
 	auto bf = cv::BFMatcher::create(normType);
 
@@ -49,21 +51,23 @@ void match(const std::string& detectorName, const std::string& path1, const Keyp
 
 
 
-	// --- Visualization Code ---
-    // Load the original images
+	//Visualization Code
+    //Load the original images
     cv::Mat img1 = cv::imread(path1, cv::IMREAD_COLOR);
     cv::Mat img2 = cv::imread(path2, cv::IMREAD_COLOR);
 
-    // Create an image to draw the matches on
+    //Create an image to draw the matches on
     cv::Mat img_matches;
     cv::drawMatches(img1, res1.keypoints, img2, res2.keypoints, matches, img_matches);
 
-    // Create a window and display the matches
+    //Create a window and display the matches
     std::string windowTitle = "Matches (" + detectorName + ")";
     cv::namedWindow(windowTitle, cv::WINDOW_NORMAL);
     cv::imshow(windowTitle, img_matches);
     cv::waitKey(0);
     cv::destroyWindow(windowTitle);
+
+	return matches;
 }
 
 int main() {
@@ -74,6 +78,7 @@ int main() {
         std::vector<std::vector<KeypointsAndDescriptors>> allAkazeResults;
 		std::vector<std::vector<std::string>> allImagePaths;
 
+		//feature detection
 		for(const auto& dir:  imageSetDirs){
 			std::vector<cv::String> imagePaths;
 			cv::glob(dir + "/*.jpg", imagePaths, false);
@@ -82,7 +87,6 @@ int main() {
             std::vector<KeypointsAndDescriptors> currentSetAkazeResults;
 			std::vector<std::string> currentSetImagePaths;
 
-			
 			for(const auto& imagePath: imagePaths){
 				auto image = cv::imread(imagePath, cv::IMREAD_COLOR);
 
@@ -93,13 +97,9 @@ int main() {
 				
 				currentSetImagePaths.push_back(imagePath);
 
-
-				// --- ORB ---
                 KeypointsAndDescriptors orbRes = featureDetection("ORB", image);
                 currentSetOrbResults.push_back(orbRes);
 
-
-                // --- AKAZE ---
                 KeypointsAndDescriptors akazeRes = featureDetection("AKAZE", image);
                 currentSetAkazeResults.push_back(akazeRes);
 
@@ -109,14 +109,24 @@ int main() {
 			allImagePaths.push_back(currentSetImagePaths);
 		}
 
+		//using feature detection for matching
 		for (size_t i = 0; i < imageSetDirs.size(); ++i){
+			std::vector<cv::DMatch> totalOrbMatches;
+            std::vector<cv::DMatch> totalAkazeMatches;
 			for(size_t j = 0; j < allImagePaths[i].size(); ++j){
 				for(size_t k = j + 1; k < allImagePaths[i].size(); ++k){
-					match("ORB", allImagePaths[i][j], allOrbResults[i][j], allImagePaths[i][k], allOrbResults[i][k]);
-					match("AKAZE", allImagePaths[i][j], allAkazeResults[i][j], allImagePaths[i][k], allAkazeResults[i][k]);
+					auto orbMatches = match("ORB", allImagePaths[i][j], allOrbResults[i][j], allImagePaths[i][k], allOrbResults[i][k]);
+					totalOrbMatches.insert(totalOrbMatches.end(), orbMatches.begin(), orbMatches.end());
+
+					auto akazeMatches = match("AKAZE", allImagePaths[i][j], allAkazeResults[i][j], allImagePaths[i][k], allAkazeResults[i][k]);
+					totalAkazeMatches.insert(totalAkazeMatches.end(), akazeMatches.begin(), akazeMatches.end());
 				}
 			}
+			//use matching to plot histograms
+			plotHistograms(totalOrbMatches, totalAkazeMatches);
 		}
+		
+
 
 		
 
