@@ -19,15 +19,12 @@ std::vector<cv::DMatch> match(const std::string& detectorName, const std::string
 
 
 	//Visualization Code
-    //Load the original images
     cv::Mat img1 = cv::imread(path1, cv::IMREAD_COLOR);
     cv::Mat img2 = cv::imread(path2, cv::IMREAD_COLOR);
 
-    //Create an image to draw the matches on
     cv::Mat img_matches;
     cv::drawMatches(img1, res1.keypoints, img2, res2.keypoints, matches, img_matches);
 
-    //Create a window and display the matches
     std::string windowTitle = "Matches (" + detectorName + ")";
     cv::namedWindow(windowTitle, cv::WINDOW_NORMAL);
     cv::imshow(windowTitle, img_matches);
